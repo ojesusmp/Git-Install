@@ -1,5 +1,7 @@
 # Git-Install
 
+Install git repos from your Claude Code or Codex.
+
 Git-Install is a portable skill package for Codex and Claude that helps an AI assistant search GitHub repositories, install selected projects from official instructions, and safely plan repo uninstall/removal.
 
 Created by Orlando Molina.

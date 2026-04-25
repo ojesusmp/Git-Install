@@ -1,0 +1,14 @@
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.swp
+
+# Local runtime/test artifacts
+node_modules/
+.pytest_cache/
+__pycache__/
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example

@@ -1,0 +1,169 @@
+---
+name: install-repo
+description: Search, inspect, install, and uninstall GitHub repositories from a repo name, natural-language description, GitHub owner/repo pair, GitHub URL, username/account name, branch/tag/commit ref, or repo plus commit. Use when the user says "repo search", "repo install", "install repo", "repo uninstall", or asks Codex to find, evaluate, install, or safely remove a GitHub project. Supports numbered search results, installation from official README/docs/site instructions, default local clone root D:\[002]Codex_ChatGPT\installed-repos, commit checkout, install-option selection, and conservative uninstall planning that avoids breaking Codex/Claude/AI tooling.
+---
+
+# Install Repo
+
+## Modes
+
+Choose the mode from the user's wording:
+
+- `repo search <query>`: Search only. Return the same repo information as install mode, then ask whether the user wants to install one and which number.
+- `repo install <query>` or `install repo <query>`: Search or resolve, present numbered choices when needed, then install the selected repo from official instructions.
+- `repo uninstall <query>`: Identify installed repo(s), inspect their install/uninstall docs and local effects, present a conservative removal plan, and require explicit confirmation before removing files or running uninstall commands.
+
+If the user gives a bare query without a mode, infer:
+
+- install intent when they say `install`, `setup`, `clone`, or `get this repo`
+- search intent when they say `find`, `look for`, `search`, `compare`, or describe what they want without asking to install
+- uninstall intent when they say `remove`, `uninstall`, `delete repo`, `clean up`, or `undo install`
+
+## Input Parsing
+
+Accept all of these:
+
+- `owner/repo`, such as `JuliusBrussee/caveman`: direct repo.
+- GitHub repo URL: direct repo.
+- Username/account only, such as `JuliusBrussee`: list public repos under that account.
+- Repo/search name, such as `caveman`: search GitHub.
+- Natural-language description, such as `repo search a CLI that compresses LLM prompts`: extract keywords, search GitHub, and rank by relevance.
+- Branch, tag, or commit with repo, such as `owner/repo@abc1234`, `owner/repo commit abc1234`, or a GitHub commit URL: install that repo checked out at the requested ref.
+
+A commit hash without repo context is not enough to search reliably across GitHub. Ask for the repository or account unless the surrounding conversation already identifies it.
+
+## Search Workflow
+
+1. Resolve the search target.
+   - Prefer GitHub tools or `gh search repos`.
+   - For account names, prefer `gh repo list <owner>` or GitHub API.
+   - For natural-language descriptions, search multiple keyword variants if needed. Include topic/function words, not filler.
+   - If GitHub CLI is unavailable, use web search scoped to `github.com`.
+2. Collect for each result:
+   - `owner/repo`
+   - URL
+   - description
+   - primary language
+   - stars
+   - latest update date
+   - why it appears relevant when the query was a description
+3. Present 5-10 numbered results.
+
+Use this format:
+
+```text
+I found these likely matches:
+1. owner/repo - short description (language, stars, updated date) Relevant because: ...
+2. owner/repo - short description (language, stars, updated date) Relevant because: ...
+
+Reply with the number you want installed, or say "search more" with a refinement.
+```
+
+For `repo search`, stop after presenting results and ask whether to install. Do not install until the user selects a number.
+
+For `repo install`, install only after the user selects a number unless the input uniquely identifies a repo by `owner/repo` or URL.
+
+## Install Workflow
+
+1. Inspect official instructions.
+   - Read the README first.
+   - Then check official docs/site, wiki, releases, package registry pages, `INSTALL`, `CONTRIBUTING`, `package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `Dockerfile`, `docker-compose.yml`, and similar manifests.
+   - Treat official repo docs as authoritative over third-party posts.
+2. Clone safely.
+   - Default clone root: `D:\[002]Codex_ChatGPT\installed-repos`.
+   - Clone into a subfolder named after the repo unless the user specifies another folder.
+   - If installing a non-default branch, tag, or commit, include the short ref in the folder name only when needed to avoid colliding with an existing checkout.
+   - If the target folder exists, inspect it and avoid overwriting user work.
+3. Check out requested refs.
+   - If a branch, tag, or commit was provided, fetch/checkout it before installing.
+   - Record the resolved commit SHA.
+4. Choose the install option.
+   - If there is one clear default/recommended install path, run it.
+   - If multiple official options exist and one is clearly marked default/recommended/local development, run that option and list the other official commands in the final report.
+   - If options are materially different and no default is clear, ask the user which option to run.
+   - Avoid global installs unless official instructions require them or the user explicitly approves.
+5. Verify.
+   - Run the repo's recommended smoke test, version command, build command, test command, or example command.
+   - If full verification is too expensive or blocked, run the safest meaningful check and report the gap.
+
+Use this format when install options require a choice:
+
+```text
+The repo documents multiple install options:
+1. Native/local - command(s)
+2. Docker - command(s)
+3. Global CLI - command(s)
+
+Reply with the install option number to run.
+```
+
+## Uninstall Workflow
+
+Uninstall is high-risk because repos may install global packages, hooks, services, shell profile edits, MCP servers, skills, config files, or AI-tool integrations. Default to a plan-first workflow.
+
+1. Identify the installed target.
+   - Search `D:\[002]Codex_ChatGPT\installed-repos` first.
+   - Match by folder name, git remote URL, package name, binary name, or user query.
+   - If ambiguous, list candidates and ask for a number.
+2. Inspect before removing.
+   - Read README/docs for uninstall instructions.
+   - Search the repo for uninstall/remove/cleanup docs and scripts.
+   - Inspect manifests for installed package names and binaries.
+   - Check likely global package managers only when relevant: npm, pip, cargo, go, pnpm, bun, winget, Docker.
+   - Check whether the repo installed hooks, MCP servers, skills, prompts, shell/profile edits, services, scheduled tasks, PATH changes, or files under AI config roots.
+3. Protect AI tooling and credentials.
+   - Never delete or rewrite `~/.codex`, `~/.claude`, `.omx`, `.omc`, config files, hooks, skills, prompts, credentials, auth files, or settings wholesale.
+   - Only remove entries that are clearly owned by the target repo and only after showing the exact path/key/command.
+   - Prefer disable/comment/archive over deletion for shared config.
+   - Back up config files before modifying them.
+4. Present a removal plan before doing destructive work.
+   - Separate safe commands from destructive commands.
+   - Include exactly what folders, global packages, binaries, hooks, config entries, Docker resources, or services would be removed.
+   - Ask for explicit confirmation before deleting folders or running uninstall commands.
+5. Execute only after confirmation.
+   - Run official uninstall commands first.
+   - Remove the local clone last.
+   - Verify binaries/config entries are gone and AI tools still start or report version normally.
+
+Use this format:
+
+```text
+Uninstall plan for owner/repo:
+1. Official uninstall command(s): ...
+2. Local clone to remove: ...
+3. Global package/binary cleanup: ...
+4. Config/hooks entries to remove or archive: ...
+5. Verification commands: ...
+
+This will remove files or global packages. Reply "confirm uninstall" to proceed.
+```
+
+## Final Report
+
+For search:
+
+- query used
+- result list
+- suggested best match, if there is one
+- prompt to install by number
+
+For install:
+
+- selected repo URL
+- install folder
+- branch/tag/commit requested, if any
+- resolved commit SHA, if a ref was requested
+- install option used
+- commands run
+- verification result
+- other official install options documented but not run
+- warnings or platform caveats
+
+For uninstall:
+
+- selected repo/install target
+- official uninstall instructions found
+- commands run
+- files/config entries removed or archived
+- verification result
+- anything intentionally left in place to protect AI tooling

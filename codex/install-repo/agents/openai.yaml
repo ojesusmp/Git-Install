@@ -1,0 +1,4 @@
+interface:
+  display_name: "Install Repo"
+  short_description: "Search, install, and uninstall GitHub repos"
+  default_prompt: "Use $install-repo to repo search, repo install, or repo uninstall a GitHub project by name, description, owner/repo, URL, username, or commit ref."

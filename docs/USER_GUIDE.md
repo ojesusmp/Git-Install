@@ -1,36 +1,31 @@
 # User Guide
 
-This guide explains how to use Git-Install in plain language.
-
-Created by Orlando Molina.
+Git-Install was created by Orlando Molina to make GitHub repo search, install, and uninstall workflows easier from Claude Code or Codex.
 
 ## Install The Skill
 
-For Codex:
+Start with the install guide:
 
-```powershell
-.\scripts\install-codex.ps1
-```
+[INSTALL.md](INSTALL.md)
 
-For Claude:
+Short version:
 
-```powershell
-.\scripts\install-claude.ps1
-```
+- Codex loads skills from `~/.codex/skills`.
+- Claude loads skills from `~/.claude/skills`.
+- Installing this skill means copying the correct `install-repo` folder into the correct skill directory.
 
-Restart or reload your AI tool if it does not see the skill immediately.
+The scripts in `scripts/` only automate that copy step.
 
 ## Search For Repos
 
 Use `repo search` when you only want to look.
 
-Examples:
+Examples using this project:
 
 ```text
-repo search caveman
-repo search JuliusBrussee
-repo search a tool that compresses LLM prompts
-repo search github cli dashboard for Claude Code sessions
+repo search Git-Install
+repo search a skill that lets Codex or Claude install GitHub repos
+repo search ojesusmp
 ```
 
 The assistant should return a numbered list with repository names, descriptions, language, stars, update date, and why each result matches.
@@ -41,14 +36,13 @@ To install one, reply with the number.
 
 Use `repo install` or `install repo` when your goal is to install.
 
-Examples:
+Examples using this project:
 
 ```text
-repo install caveman
-install repo oh my codex
-repo install JuliusBrussee/caveman
-repo install https://github.com/JuliusBrussee/caveman
-repo install JuliusBrussee/caveman@abc1234
+repo install Git-Install
+repo install ojesusmp/Git-Install
+repo install https://github.com/ojesusmp/Git-Install
+repo install ojesusmp/Git-Install@main
 ```
 
 If the input matches multiple repositories, the assistant should list them and wait for your number.
@@ -57,7 +51,7 @@ If the input uniquely identifies one repo, the assistant can inspect and install
 
 ## Install Options
 
-Some repos have more than one install method, such as npm, Docker, source build, or plugin marketplace.
+Some repos have more than one install method, such as npm, Docker, source build, plugin marketplace, or manual copy.
 
 The assistant should:
 
@@ -69,10 +63,10 @@ The assistant should:
 
 Use `repo uninstall` when you want to remove a repo or undo an install.
 
-Example:
+Example using this project:
 
 ```text
-repo uninstall oh-my-codex
+repo uninstall Git-Install
 ```
 
 The assistant should not remove anything immediately. It should first show an uninstall plan with:

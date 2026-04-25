@@ -1,6 +1,6 @@
 ---
 name: install-repo
-description: Search, inspect, install, and uninstall GitHub repositories from a repo name, natural-language description, GitHub owner/repo pair, GitHub URL, username/account name, branch/tag/commit ref, or repo plus commit. Use when the user says "repo search", "repo install", "install repo", "repo uninstall", or asks Claude to find, evaluate, install, or safely remove a GitHub project. Supports numbered search results, installation from official README/docs/site instructions, default local clone root D:\[002]Codex_ChatGPT\installed-repos, commit checkout, install-option selection, and conservative uninstall planning that avoids breaking Codex/Claude/AI tooling.
+description: Search, inspect, install, and uninstall GitHub repositories from a repo name, natural-language description, GitHub owner/repo pair, GitHub URL, username/account name, branch/tag/commit ref, or repo plus commit. Use when the user says "repo search", "repo install", "install repo", "repo uninstall", or asks Claude to find, evaluate, install, or safely remove a GitHub project. Supports numbered search results, installation from official README/docs/site instructions, a portable local installed-repos clone root, commit checkout, install-option selection, and conservative uninstall planning that avoids breaking Codex/Claude/AI tooling.
 ---
 
 # install-repo — search, install, and uninstall GitHub repos
@@ -13,10 +13,10 @@ description: Search, inspect, install, and uninstall GitHub repositories from a 
 
 ## Default install location
 
-Use this clone root unless the user names another folder:
+Use an `installed-repos` folder under the current project/workspace unless the user names another folder.
 
 ```text
-D:\[002]Codex_ChatGPT\installed-repos
+<current-project>/installed-repos
 ```
 
 Create it if it does not exist.
@@ -29,12 +29,12 @@ Create it if it does not exist.
 
 ## Input parsing
 
-- `owner/repo`, such as `JuliusBrussee/caveman`: direct repo.
+- `owner/repo`, such as `ojesusmp/Git-Install`: direct repo.
 - GitHub repo URL: direct repo.
-- Username/account only, such as `JuliusBrussee`: list public repos under that account.
-- Repo/search name, such as `caveman`: search GitHub.
-- Natural-language description, such as `repo search a CLI that compresses LLM prompts`: extract keywords, search GitHub, and rank by relevance.
-- Branch, tag, or commit with repo, such as `owner/repo@abc1234`, `owner/repo commit abc1234`, or a GitHub commit URL: install that repo checked out at the requested ref.
+- Username/account only, such as `ojesusmp`: list public repos under that account.
+- Repo/search name, such as `Git-Install`: search GitHub.
+- Natural-language description, such as `repo search a skill that lets Codex or Claude install GitHub repos`: extract keywords, search GitHub, and rank by relevance.
+- Branch, tag, or commit with repo, such as `ojesusmp/Git-Install@abc1234`, `ojesusmp/Git-Install commit abc1234`, or a GitHub commit URL: install that repo checked out at the requested ref.
 
 A commit hash without repo context is not enough to search reliably across GitHub. Ask for the repository or account unless the surrounding conversation already identifies it.
 
@@ -78,7 +78,7 @@ For `repo search`, stop after presenting results and ask whether to install. For
    - Then check official docs/site, wiki, releases, package registry pages, `INSTALL`, `CONTRIBUTING`, `package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `Dockerfile`, `docker-compose.yml`, and similar manifests.
    - Treat official repo docs as authoritative over third-party posts.
 2. Clone safely.
-   - Clone into `D:\[002]Codex_ChatGPT\installed-repos\<repo-name>` by default.
+   - Clone into `<current-project>/installed-repos/<repo-name>` by default.
    - If installing a non-default branch, tag, or commit, include the short ref in the folder name only when needed to avoid colliding with an existing checkout.
    - If the target folder exists, inspect it before changing anything.
 3. Check out requested refs.
@@ -107,7 +107,7 @@ Reply with the install option number to run.
 Uninstall is high-risk because repos may install global packages, hooks, services, shell profile edits, MCP servers, skills, config files, or AI-tool integrations. Default to a plan-first workflow.
 
 1. Identify the installed target.
-   - Search `D:\[002]Codex_ChatGPT\installed-repos` first.
+   - Search the current project/workspace `installed-repos` folder first.
    - Match by folder name, git remote URL, package name, binary name, or user query.
    - If ambiguous, list candidates and ask for a number.
 2. Inspect before removing.

@@ -1,6 +1,6 @@
 # Safety Model
 
-Git-Install is designed to be useful without damaging a user's AI tooling environment.
+Git-Install is Orlando Molina's skill for making repo install/uninstall workflows useful without damaging a user's AI tooling environment.
 
 Created by Orlando Molina.
 

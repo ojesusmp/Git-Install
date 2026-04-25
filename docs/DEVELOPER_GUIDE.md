@@ -1,11 +1,13 @@
 # Developer Guide
 
-Git-Install packages the same workflow for two AI environments:
+Git-Install is Orlando Molina's public-facing skill package for GitHub repo search, install, and uninstall workflows.
+
+It packages the same workflow for two AI environments:
 
 - Codex skill format under `codex/install-repo`
 - Claude skill format under `claude/install-repo`
 
-Created by Orlando Molina.
+Created and owned by Orlando Molina.
 
 ## Design Goals
 
@@ -117,6 +119,18 @@ Before destructive action, show the exact removal plan and require:
 confirm uninstall
 ```
 
+## Public Documentation Requirements
+
+Examples should use this project itself, such as:
+
+```text
+repo search Git-Install
+repo install ojesusmp/Git-Install
+repo uninstall Git-Install
+```
+
+Do not use unrelated third-party repos as primary examples in public docs.
+
 ## Release Checklist
 
 Before pushing:
@@ -125,4 +139,5 @@ Before pushing:
 2. Run a structural check on the Claude skill.
 3. Review README examples for current behavior.
 4. Confirm no credentials or local auth files are included.
-5. Commit with a clear decision-oriented message.
+5. Confirm public-facing docs credit Orlando Molina.
+6. Commit with a clear decision-oriented message.

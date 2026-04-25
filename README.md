@@ -1,61 +1,118 @@
-# install-repo skill
+# Git-Install
 
-Reusable Codex and Claude skill for finding, inspecting, installing, and conservatively uninstalling GitHub repositories.
+Git-Install is a portable skill package for Codex and Claude that helps an AI assistant search GitHub repositories, install selected projects from official instructions, and safely plan repo uninstall/removal.
 
-## What It Does
+Created by Orlando Molina.
 
-- `repo search <query>` searches by repo name, GitHub account, `owner/repo`, URL, commit ref, or natural-language description.
-- `repo install <query>` and `install repo <query>` search or resolve a repo, inspect official installation docs, install into a local clone folder, and verify the result.
-- `repo uninstall <query>` identifies installed repos, inspects uninstall docs and local side effects, then presents a confirmation-required removal plan.
+## What This Is
 
-Default local clone root used by the skill:
+This repository contains two versions of the same skill:
 
-```text
-D:\[002]Codex_ChatGPT\installed-repos
-```
+- `codex/install-repo/` for Codex
+- `claude/install-repo/` for Claude
 
-## Repo Layout
+The skill adds three user-facing flows:
 
-```text
-codex/install-repo/SKILL.md
-codex/install-repo/agents/openai.yaml
-claude/install-repo/SKILL.md
-scripts/install-codex.ps1
-scripts/install-claude.ps1
-```
+- `repo search <query>`: find repositories by name, account, `owner/repo`, URL, commit ref, or natural-language description.
+- `repo install <query>` or `install repo <query>`: search/resolve a repository, inspect official install docs, install it, and verify it.
+- `repo uninstall <query>`: inspect the installed repo and related configuration, then produce a safe uninstall plan before removing anything.
 
-## Install For Codex
+## Quick Start
+
+Install for Codex:
 
 ```powershell
 .\scripts\install-codex.ps1
 ```
 
-This copies the Codex skill to:
-
-```text
-$env:USERPROFILE\.codex\skills\install-repo
-```
-
-## Install For Claude
+Install for Claude:
 
 ```powershell
 .\scripts\install-claude.ps1
 ```
 
-This copies the Claude skill to:
+Default clone location used by the skill:
 
 ```text
-$env:USERPROFILE\.claude\skills\install-repo
+D:\[002]Codex_ChatGPT\installed-repos
 ```
 
-## Safety Model
+## Example Prompts
 
-Installation is allowed to run official setup commands after the user selects a repo. Uninstall is intentionally stricter: the skill must inspect official docs, local files, package managers, hooks, skills, prompts, MCP entries, config, and AI-tool roots before proposing removal. It must not remove files or global packages until the user explicitly confirms the uninstall plan.
+Search only:
+
+```text
+repo search a CLI that compresses LLM prompts
+```
+
+Install after choosing from a numbered list:
+
+```text
+repo install caveman
+```
+
+Install a direct repo:
+
+```text
+repo install JuliusBrussee/caveman
+```
+
+Install a specific commit:
+
+```text
+repo install JuliusBrussee/caveman@abc1234
+```
+
+Plan uninstall:
+
+```text
+repo uninstall oh-my-codex
+```
+
+## Repository Layout
+
+```text
+codex/install-repo/SKILL.md              Codex skill instructions
+codex/install-repo/agents/openai.yaml    Codex UI metadata
+claude/install-repo/SKILL.md             Claude skill instructions
+scripts/install-codex.ps1                Copies the Codex skill into ~/.codex
+scripts/install-claude.ps1               Copies the Claude skill into ~/.claude
+docs/USER_GUIDE.md                       Plain-language usage guide
+docs/DEVELOPER_GUIDE.md                  Maintainer and implementation guide
+docs/SAFETY_MODEL.md                     Install/uninstall safety rules
+```
+
+## Safety Summary
+
+Installation is allowed only after the repo is selected or uniquely identified. Uninstall is stricter: the skill must inspect official docs, local clones, package managers, hooks, config, skills, prompts, MCP entries, and AI-tool roots before proposing removal.
+
+The skill should never broadly delete or rewrite:
+
+- `~/.codex`
+- `~/.claude`
+- `.omx`
+- `.omc`
+- credentials
+- auth files
+- shared config
+- hooks
+- prompts
+- skills
+
+See [docs/SAFETY_MODEL.md](docs/SAFETY_MODEL.md).
 
 ## Validation
 
-For Codex skill validation, run:
+Validate the Codex skill:
 
 ```powershell
 python C:/Users/molin/.codex/skills/.system/skill-creator/scripts/quick_validate.py ./codex/install-repo
 ```
+
+Basic Claude validation is structural: confirm `claude/install-repo/SKILL.md` has frontmatter with `name` and `description`, and includes the search/install/uninstall workflows.
+
+## Credits
+
+Created by Orlando Molina.
+
+Implementation assistance by Codex.

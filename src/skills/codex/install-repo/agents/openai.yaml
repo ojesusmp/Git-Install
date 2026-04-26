@@ -1,0 +1,5 @@
+# install-repo skill manifest for Codex agent runtime
+interface:
+  display_name: 'Install Repo'
+  short_description: 'Search, install, and uninstall GitHub repos via @ojesusmp/git-install'
+  default_prompt: 'Use $install-repo to repo search, repo install, or repo uninstall a GitHub project by name, description, owner/repo, URL, username, or commit ref. Confirm via TTY when prompted.'

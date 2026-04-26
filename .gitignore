@@ -12,3 +12,13 @@ __pycache__/
 .env
 .env.*
 !.env.example
+
+# TypeScript build output
+dist/
+
+# Test coverage
+coverage/
+.vitest/
+
+# Logs
+*.log

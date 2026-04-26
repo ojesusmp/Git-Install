@@ -1,6 +1,12 @@
 # Changelog
 
-## v1.0.0 (unreleased) — TypeScript Rewrite
+## v1.0.1 — Hotfix: setup command path resolution
+
+### Fixed
+
+- `setup --claude` / `setup --codex` failed with `ENOENT: no such file or directory` because `packageRoot()` resolved two levels up from `dist/cli.js` instead of one. tsup bundles `src/cli.ts` and its imports into a single `dist/cli.js`, so `import.meta.url` points to that bundled file at runtime — not to `dist/commands/setup.js`. Fixed in `src/commands/setup.ts:packageRoot()`.
+
+## v1.0.0 — TypeScript Rewrite
 
 **BREAKING CHANGES — complete rewrite from PowerShell helper scripts to npm TypeScript CLI.**
 

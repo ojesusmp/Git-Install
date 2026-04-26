@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { z } from 'zod';
 import { dataDir } from './data-dir.js';
+import { atomicWrite } from '../safety/atomicity.js';
 
 export const InstallRecord = z.object({
   repo: z.string(),
@@ -43,10 +44,7 @@ export async function loadRecords(): Promise<InstallStore> {
 
 async function persistStore(store: InstallStore): Promise<void> {
   const filePath = storePath();
-  const dir = path.dirname(filePath);
-  await fs.mkdir(dir, { recursive: true });
-  // TODO: swap to atomicWrite from src/safety/atomicity.ts once Phase B lands
-  await fs.writeFile(filePath, JSON.stringify(store, null, 2), 'utf8');
+  await atomicWrite(filePath, JSON.stringify(store, null, 2));
 }
 
 export async function addRecord(record: InstallRecord): Promise<void> {

@@ -13,10 +13,11 @@ export interface SetupOptions {
 }
 
 function packageRoot(): string {
-  // import.meta.url points to dist/commands/setup.js at runtime
+  // tsup bundles src/cli.ts and its imports into a single dist/cli.js
+  // so import.meta.url points to dist/cli.js at runtime
   const thisFile = fileURLToPath(import.meta.url);
-  // go up two levels: commands/ -> dist/ -> package root
-  return path.resolve(path.dirname(thisFile), '..', '..');
+  // go up one level: dist/ -> package root
+  return path.resolve(path.dirname(thisFile), '..');
 }
 
 function skillsSrcRoot(): string {

@@ -1,6 +1,6 @@
 {
   "name": "@ojesusmp/git-install",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "CLI to install Claude/Codex skills and manage GitHub repository installations",
   "type": "module",
   "main": "dist/cli.js",

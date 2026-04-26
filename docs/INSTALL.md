@@ -1,112 +1,133 @@
 # Installation Guide
 
-Git-Install was created by Orlando Molina.
+## Prerequisites
 
-## How Installation Works
+| Requirement | Version | Notes                               |
+| ----------- | ------- | ----------------------------------- |
+| Node.js     | >= 20   | Required                            |
+| git         | any     | Required for cloning                |
+| gh CLI      | any     | Optional — speeds up ref resolution |
 
-There is no universal package-manager command that installs both Codex and Claude skills for every user environment.
+## Install the CLI
 
-The correct install method is to copy the skill folder into the skill directory used by your AI tool:
+### Option A: global install
 
-- Codex: `~/.codex/skills/install-repo`
-- Claude: `~/.claude/skills/install-repo`
-
-The helper scripts in this repo only automate that copy. They are optional.
-
-## Step 1: Clone This Repository
-
-When this repo is public:
-
-```powershell
-git clone https://github.com/ojesusmp/Git-Install.git
-cd Git-Install
+```sh
+npm install -g @ojesusmp/git-install
 ```
 
-While it is private, GitHub authentication is required before cloning.
+After this, `git-install` is available as a command on your PATH.
 
-## Install For Codex
+### Option B: use without installing
 
-PowerShell:
-
-```powershell
-New-Item -ItemType Directory -Force "$env:USERPROFILE\.codex\skills" | Out-Null
-Copy-Item -Recurse -Force ".\codex\install-repo" "$env:USERPROFILE\.codex\skills\"
+```sh
+npx @ojesusmp/git-install <command>
 ```
 
-Equivalent manual result:
+No install needed. npm downloads and runs the package directly.
 
-```text
-%USERPROFILE%\.codex\skills\install-repo\SKILL.md
-%USERPROFILE%\.codex\skills\install-repo\agents\openai.yaml
+## Set Up Skill Files
+
+Run `setup` to copy the skill files into your AI tool's config directory:
+
+```sh
+# Claude Code only
+git-install setup --claude
+
+# OpenAI Codex only
+git-install setup --codex
+
+# Both
+git-install setup --both
 ```
 
-Optional helper:
+With `npx`:
 
-```powershell
-.\scripts\install-codex.ps1
+```sh
+npx @ojesusmp/git-install setup --claude
+npx @ojesusmp/git-install setup --both
 ```
 
-## Install For Claude
+Setup writes skill files to:
 
-PowerShell:
+- Claude: `~/.claude/skills/install-repo/`
+- Codex: `~/.codex/skills/install-repo/`
 
-```powershell
-New-Item -ItemType Directory -Force "$env:USERPROFILE\.claude\skills" | Out-Null
-Copy-Item -Recurse -Force ".\claude\install-repo" "$env:USERPROFILE\.claude\skills\"
-```
-
-Equivalent manual result:
-
-```text
-%USERPROFILE%\.claude\skills\install-repo\SKILL.md
-```
-
-Optional helper:
-
-```powershell
-.\scripts\install-claude.ps1
-```
-
-## macOS/Linux
-
-Codex:
-
-```bash
-mkdir -p ~/.codex/skills
-cp -R ./codex/install-repo ~/.codex/skills/install-repo
-```
-
-Claude:
-
-```bash
-mkdir -p ~/.claude/skills
-cp -R ./claude/install-repo ~/.claude/skills/install-repo
-```
+The setup command prints each file path written and a file count.
 
 ## Verify
 
-Codex validation, from the cloned repo:
+Check the CLI version and help:
 
-```powershell
-python C:/Users/molin/.codex/skills/.system/skill-creator/scripts/quick_validate.py ./codex/install-repo
+```sh
+git-install --version
+git-install --help
 ```
 
-Functional check inside Codex or Claude:
+Confirm skill files were written:
 
-```text
-repo search Git-Install
+```sh
+# macOS / Linux
+ls ~/.claude/skills/install-repo/
+ls ~/.codex/skills/install-repo/
+
+# Windows (PowerShell)
+dir $env:USERPROFILE\.claude\skills\install-repo\
+dir $env:USERPROFILE\.codex\skills\install-repo\
 ```
 
-The assistant should recognize the skill and return GitHub search results.
+Then trigger a search from your AI tool to confirm the skill loads:
+
+```
+repo search git-install
+```
 
 ## Update
 
-Pull the latest repo changes, then repeat the copy command:
+Re-run setup after updating the CLI to replace skill files with the latest version:
 
-```powershell
-git pull
-.\scripts\install-codex.ps1
-.\scripts\install-claude.ps1
+```sh
+npm update -g @ojesusmp/git-install
+git-install setup --both
 ```
 
-Running the copy again replaces the installed skill files with the current repo version.
+## Uninstall
+
+Remove the CLI:
+
+```sh
+npm uninstall -g @ojesusmp/git-install
+```
+
+Remove skill files manually:
+
+```sh
+# macOS / Linux
+rm -rf ~/.claude/skills/install-repo/
+rm -rf ~/.codex/skills/install-repo/
+```
+
+On Windows, delete these directories:
+
+```
+%USERPROFILE%\.claude\skills\install-repo\
+%USERPROFILE%\.codex\skills\install-repo\
+```
+
+## Troubleshooting
+
+**"TTY required" error**
+
+`git-install repo install` and `git-install repo uninstall` require an interactive terminal for confirmation prompts. Run from a real terminal, not a piped or non-interactive shell.
+
+To bypass TTY for scripting or CI:
+
+```sh
+GIT_INSTALL_NONINTERACTIVE=1 git-install repo install owner/repo
+```
+
+This auto-confirms all prompts and logs a `WARN` message.
+
+**gh not found**
+
+The gh CLI is optional. If it is not on your PATH, ref resolution falls back to `git ls-remote` and then the GitHub REST API. Install gh from <https://cli.github.com> for faster resolution and private repo support.

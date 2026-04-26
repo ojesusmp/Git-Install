@@ -1,132 +1,92 @@
-# Git-Install
+# git-install
 
-Install GitHub repos from Claude Code or Codex.
+> Search, install, and uninstall GitHub repositories from your AI coding tools.
 
-Git-Install is a skill package created by Orlando Molina for people who want an AI assistant to search GitHub, inspect repositories, install selected projects from official instructions, and safely plan uninstall/removal when needed.
+`@ojesusmp/git-install` is an npm CLI that teaches Claude Code and OpenAI Codex how to find, install, and cleanly remove GitHub repositories — with code-enforced safety guards, atomic file operations, and SHA-pinned installs.
 
-## What You Get
+## Prerequisites
 
-This repo includes the same idea packaged for two AI tools:
+- Node.js >= 20
+- git
+- gh CLI (optional — used for faster ref resolution; falls back to `git ls-remote` and GitHub REST API)
 
-- `codex/install-repo/` for Codex
-- `claude/install-repo/` for Claude
+## Quickstart
 
-The skill gives your assistant three workflows:
+Run setup once to install the skill files into your AI tool's config directory:
 
-- `repo search <query>`: search GitHub by name, account, `owner/repo`, URL, commit ref, or natural-language description.
-- `repo install <query>` or `install repo <query>`: search or resolve a repo, inspect official install docs, install it, and verify it.
-- `repo uninstall <query>`: inspect the installed repo and related configuration, then produce a safe uninstall plan before removing anything.
-
-## Installation
-
-The real installation method is simple: copy the skill folder into your AI tool's skill directory.
-
-Helper scripts are included for convenience, but they are not magic and they are not the only way to install.
-
-Read the full guide:
-
-[docs/INSTALL.md](docs/INSTALL.md)
-
-Quick Codex install from a cloned repo:
-
-```powershell
-New-Item -ItemType Directory -Force "$env:USERPROFILE\.codex\skills" | Out-Null
-Copy-Item -Recurse -Force ".\codex\install-repo" "$env:USERPROFILE\.codex\skills\"
+```sh
+npx @ojesusmp/git-install setup --claude
+npx @ojesusmp/git-install setup --codex
+npx @ojesusmp/git-install setup --both
 ```
 
-Quick Claude install from a cloned repo:
+Then trigger the skill from your AI tool:
 
-```powershell
-New-Item -ItemType Directory -Force "$env:USERPROFILE\.claude\skills" | Out-Null
-Copy-Item -Recurse -Force ".\claude\install-repo" "$env:USERPROFILE\.claude\skills\"
+```
+repo install owner/repo
 ```
 
-Optional helper scripts:
+## Features
 
-```powershell
-.\scripts\install-codex.ps1
-.\scripts\install-claude.ps1
+- **Cross-platform** — tested on Windows, macOS, and Linux via GitHub Actions CI
+- **Code-enforced safety** — protected-directory allowlist, TTY confirmation gates, and SHA pinning are enforced in source code (`src/safety/`), not by LLM instruction
+- **Atomic file operations** — backup-write-rename pattern with orphan recovery on next run
+- **TTY confirmation gates** — installs require typing `confirm`; uninstalls require typing `confirm uninstall`
+- **SHA pinning** — every install resolves and records the exact commit SHA; mutable refs (branches, tags) trigger a warning
+- **Exit code taxonomy** — machine-readable exit codes for scripting
+
+## CLI Usage
+
+### Setup
+
+Copy skill files into your AI tool's config directory:
+
+```sh
+git-install setup --claude     # ~/.claude/skills/install-repo/
+git-install setup --codex      # ~/.codex/skills/install-repo/
+git-install setup --both       # both targets
 ```
 
-## Example Prompts
+### Search
 
-These examples use this project itself.
-
-Search:
-
-```text
-repo search Git-Install
-repo search a skill that lets Codex or Claude install GitHub repos
+```sh
+git-install repo search owner/repo
+git-install repo search "natural language description"
+git-install repo search https://github.com/owner/repo
 ```
 
-Install:
+### Install
 
-```text
-repo install ojesusmp/Git-Install
-repo install https://github.com/ojesusmp/Git-Install
-repo install ojesusmp/Git-Install@main
+```sh
+git-install repo install owner/repo
+git-install repo install owner/repo@v1.2.3
+git-install repo install owner/repo@abc1234def   # SHA pin — immutable
+git-install repo install https://github.com/owner/repo
 ```
 
-Uninstall:
+### Uninstall
 
-```text
-repo uninstall Git-Install
+```sh
+git-install repo uninstall repo-name
 ```
 
-## Repository Layout
+## Safety
 
-```text
-codex/install-repo/SKILL.md              Codex skill instructions
-codex/install-repo/agents/openai.yaml    Codex UI metadata
-claude/install-repo/SKILL.md             Claude skill instructions
-scripts/install-codex.ps1                Optional Codex install helper
-scripts/install-claude.ps1               Optional Claude install helper
-docs/INSTALL.md                          Installation guide
-docs/USER_GUIDE.md                       Plain-language usage guide
-docs/DEVELOPER_GUIDE.md                  Maintainer and implementation guide
-docs/SAFETY_MODEL.md                     Install/uninstall safety rules
-CONTRIBUTING.md                          Contribution guide
-```
+The CLI enforces a hardcoded protected-directory allowlist that blocks writes to `~/.claude`, `~/.codex`, `~/.ssh`, `~/.aws`, and other sensitive paths. This guard operates on the CLI's own file operations — it does not sandbox arbitrary shell commands an AI assistant might run after reading repo content.
 
-## Default Clone Location
+See [docs/SAFETY_MODEL.md](docs/SAFETY_MODEL.md) for the full threat model, code-enforced primitives, and limitations.
 
-The skill should clone installed repositories into:
+## Documentation
 
-```text
-<current-project>/installed-repos
-```
+| Document                                           | Description                                                   |
+| -------------------------------------------------- | ------------------------------------------------------------- |
+| [docs/INSTALL.md](docs/INSTALL.md)                 | Prerequisites, installation, verification, uninstall          |
+| [docs/USER_GUIDE.md](docs/USER_GUIDE.md)           | CLI usage, confirmation UX, exit codes, environment variables |
+| [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) | TypeScript dev setup, project structure, TDD policy, release  |
+| [docs/SAFETY_MODEL.md](docs/SAFETY_MODEL.md)       | Safety primitives, threat model, limitations                  |
+| [CONTRIBUTING.md](CONTRIBUTING.md)                 | PR requirements, commit conventions, issue templates          |
+| [CHANGELOG.md](CHANGELOG.md)                       | Version history and breaking changes                          |
 
-The user can always provide a different folder.
+## License
 
-## Safety Summary
-
-Install can proceed after the repo is selected or uniquely identified. Uninstall is stricter: the skill must inspect official docs, local clones, package managers, hooks, config, skills, prompts, MCP entries, and AI-tool roots before proposing removal.
-
-The skill should never broadly delete or rewrite:
-
-- `~/.codex`
-- `~/.claude`
-- `.omx`
-- `.omc`
-- credentials
-- auth files
-- shared config
-- hooks
-- prompts
-- skills
-
-See [docs/SAFETY_MODEL.md](docs/SAFETY_MODEL.md).
-
-## Validation
-
-Validate the Codex skill:
-
-```powershell
-python C:/Users/molin/.codex/skills/.system/skill-creator/scripts/quick_validate.py ./codex/install-repo
-```
-
-Basic Claude validation is structural: confirm `claude/install-repo/SKILL.md` has frontmatter with `name` and `description`, and includes the search/install/uninstall workflows.
-
-## Credits
-
-Created by Orlando Molina.
+MIT — see [LICENSE](LICENSE).

@@ -1,143 +1,119 @@
 # Developer Guide
 
-Git-Install is Orlando Molina's public-facing skill package for GitHub repo search, install, and uninstall workflows.
+## Setup
 
-It packages the same workflow for two AI environments:
-
-- Codex skill format under `codex/install-repo`
-- Claude skill format under `claude/install-repo`
-
-Created and owned by Orlando Molina.
-
-## Design Goals
-
-1. Make GitHub repository discovery easy from vague or precise input.
-2. Keep install behavior practical: inspect official docs, run the likely default, verify.
-3. Keep uninstall behavior conservative: inspect first, plan, confirm, then remove.
-4. Avoid breaking Codex, Claude, OMX, OMC, MCP configuration, credentials, hooks, skills, or prompts.
-
-## Skill Surfaces
-
-### Codex
-
-Files:
-
-```text
-codex/install-repo/SKILL.md
-codex/install-repo/agents/openai.yaml
+```sh
+git clone https://github.com/ojesusmp/git-install.git
+cd git-install
+npm install
 ```
 
-Validation:
+Node.js >= 20 is required.
 
-```powershell
-python C:/Users/molin/.codex/skills/.system/skill-creator/scripts/quick_validate.py ./codex/install-repo
+## Project Structure
+
+```
+src/
+  cli.ts                        Entry point, command registration
+  commands/
+    setup.ts                    git-install setup
+    search.ts                   git-install repo search
+    install.ts                  git-install repo install
+    uninstall.ts                git-install repo uninstall
+  safety/
+    protected-dirs.ts           Protected-directory allowlist and isProtected()
+    atomicity.ts                atomicWrite() and recoverFromInterrupt()
+    ref-resolver.ts             resolveRef() — SHA resolution with mutable-ref warning
+  lib/
+    data-dir.ts                 Platform-aware data directory (XDG / AppData / fallback)
+    install-record.ts           installs.json schema (zod), load/add/remove
+    lockfile.ts                 PID-based lockfile acquire/release
+    git.ts                      cloneRepo(), checkoutRef(), revParseHead()
+    github.ts                   searchRepos() — gh / git ls-remote / REST fallback chain
+    prompt.ts                   assertTTY(), confirmInstall(), confirmUninstall()
+  skills/
+    claude/install-repo/        Claude skill files (shipped in dist/)
+    codex/install-repo/         Codex skill files (shipped in dist/)
+
+tests/
+  commands/                     Tests for setup, search, install, uninstall
+  safety/                       Tests for protected-dirs, atomicity, ref-resolver
+  lib/                          Tests for data-dir, install-record, lockfile, git, github
+  skills/                       skill-description.test.ts (word-count assertion)
 ```
 
-### Claude
+## Scripts
 
-File:
-
-```text
-claude/install-repo/SKILL.md
+```sh
+npm run typecheck       # tsc --noEmit (strict TypeScript, zero errors required)
+npm test                # vitest run (all tests)
+npm run test:coverage   # vitest run --coverage (must reach >= 80% on src/)
+npm run lint            # ESLint v9 flat config
+npm run format:check    # Prettier check
+npm run format          # Prettier write
+npm run build           # tsup (compiles src/ to dist/, copies skills/)
 ```
 
-Claude skills in this project use frontmatter with:
+## Coding Conventions
 
-```yaml
----
-name: install-repo
-description: ...
----
-```
+- **TypeScript strict mode** — `tsconfig.json` enables `strict: true`. No `any` without justification.
+- **ESM modules** — `"type": "module"` in `package.json`. Use `.js` extensions in imports even for `.ts` source files.
+- **Prettier formatting** — enforced by CI. Run `npm run format` before committing.
+- **ESLint v9 flat config** — `eslint.config.js`. All lint warnings are treated as errors in CI.
 
-## Supported Inputs
+## TDD Policy
 
-The skill should handle:
+Safety primitives in `src/safety/` are written test-first:
 
-- plain repo names
-- GitHub usernames/accounts
-- `owner/repo`
-- GitHub repo URLs
-- natural-language descriptions
-- branch/tag refs
-- commit refs with repo context
+1. Write a failing test in `tests/safety/`.
+2. Write the minimal implementation in `src/safety/<name>.ts`.
+3. Export from `src/safety/index.ts` if an index exists.
+4. Run `npm test` — test must pass.
 
-Commit-only input should not be treated as globally searchable unless the conversation already identifies a repo.
+Coverage target: >= 80% on `src/`. Check with `npm run test:coverage`.
 
-## Search Behavior
+## CI
 
-Preferred search order:
+GitHub Actions runs a matrix build on every push and pull request:
 
-1. `gh search repos <query>`
-2. `gh repo list <owner>`
-3. `gh api`
-4. web search scoped to `github.com`
+- **OS**: Windows, macOS, Linux
+- **Node**: 20
 
-Natural-language description search should extract useful topic/function words and may try multiple keyword variants.
+All three jobs must pass: `typecheck`, `test` (vitest, >= 80% coverage), `lint`, `format:check`.
 
-## Install Behavior
+A publish workflow triggers on tags matching `v*`. Pre-release versions (containing `-` in the version string, e.g. `1.0.0-beta.1`) are published with `--tag next`.
 
-Install should inspect official sources before running commands:
+## Adding a New Safety Primitive
 
-- README
-- docs site
-- wiki
-- releases
-- package registry page
-- `INSTALL`
-- `CONTRIBUTING`
-- package manifests
-- Docker files
+1. Create `tests/safety/<name>.test.ts` and write failing tests.
+2. Create `src/safety/<name>.ts` with the implementation.
+3. Export the new primitive from the safety module.
+4. Run `npm test` and confirm all tests pass.
+5. Run `npm run test:coverage` and confirm coverage stays >= 80%.
 
-If multiple install options exist:
+## Adding a New Command
 
-- run the official default if clear
-- ask the user if no default is clear
-- list unused official options in the final report
+1. Create `tests/commands/<name>.test.ts` and write failing tests.
+2. Create `src/commands/<name>.ts` with the implementation.
+3. Register the command in `src/cli.ts`.
+4. Run `npm test` and confirm all tests pass.
 
-## Uninstall Behavior
+## Skill File Changes
 
-Uninstall must be plan-first. Do not delete or uninstall immediately.
+Skill files live in `src/skills/claude/install-repo/` and `src/skills/codex/install-repo/`. The build step copies them to `dist/skills/` so they ship with the npm package.
 
-Inspect:
+When editing skill files:
 
-- local clone
-- README/docs uninstall instructions
-- uninstall scripts
-- package manifests
-- global package managers
-- binaries
-- hooks
-- shell/profile edits
-- services or scheduled tasks
-- MCP entries
-- AI tool config roots
+- Keep the `description` field in Claude's `SKILL.md` frontmatter to <= 30 words. The `tests/skills/skill-description.test.ts` test enforces this.
+- Run `npm test` to confirm the word-count test passes.
+- Run `npm run build` to verify the files are copied to `dist/skills/`.
 
-Before destructive action, show the exact removal plan and require:
+## Release
 
-```text
-confirm uninstall
-```
+1. Update `CHANGELOG.md` with the new version entry.
+2. Bump the version in `package.json`.
+3. Commit and push.
+4. Create and push a tag: `git tag v1.x.x && git push origin v1.x.x`
+5. The publish workflow runs automatically on tag push.
 
-## Public Documentation Requirements
-
-Examples should use this project itself, such as:
-
-```text
-repo search Git-Install
-repo install ojesusmp/Git-Install
-repo uninstall Git-Install
-```
-
-Do not use unrelated third-party repos as primary examples in public docs.
-
-## Release Checklist
-
-Before pushing:
-
-1. Validate the Codex skill.
-2. Run a structural check on the Claude skill.
-3. Review README examples for current behavior.
-4. Confirm no credentials or local auth files are included.
-5. Confirm public-facing docs credit Orlando Molina.
-6. Commit with a clear decision-oriented message.
+For pre-releases, use a version with a `-` (e.g. `1.1.0-beta.1`). The workflow detects the `-` and publishes with `--tag next` instead of `--tag latest`.

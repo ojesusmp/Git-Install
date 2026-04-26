@@ -25,6 +25,7 @@
 ### Removed
 
 - **BREAKING**: `scripts/install-claude.ps1` and `scripts/install-codex.ps1` (PowerShell helper scripts). Use `npx @ojesusmp/git-install setup --claude` or `--codex` instead.
+- Old root-level skill source directories `claude/install-repo/` and `codex/install-repo/`. These have been moved to `src/skills/{claude,codex}/install-repo/` and ship inside the npm package. Use `git-install setup --claude` (or `--codex`) to install them.
 - Hardcoded developer machine path from documentation
 - Inline `Copy-Item` / `cp -R` install snippets
 

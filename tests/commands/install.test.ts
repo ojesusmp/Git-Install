@@ -47,6 +47,16 @@ vi.mock('@inquirer/prompts', () => ({
   select: vi.fn(),
 }));
 
+// Mock node:fs/promises so we can control lstat per-test (FIX-3 symlink test)
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>();
+  return {
+    ...actual,
+    realpath: vi.fn().mockImplementation(actual.realpath),
+    lstat: vi.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
+  };
+});
+
 // ---------------------------------------------------------------------------
 // Imports after mocks
 // ---------------------------------------------------------------------------
@@ -61,6 +71,7 @@ import { cloneRepo, revParseHead } from '../../src/lib/git.js';
 import { addRecord } from '../../src/lib/install-record.js';
 import { searchRepos } from '../../src/lib/github.ts';
 import { select } from '@inquirer/prompts';
+import { SafetyError, UserCancelError } from '../../src/lib/exit-codes.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -78,6 +89,7 @@ const mockAddRecord = vi.mocked(addRecord);
 const mockSearchRepos = vi.mocked(searchRepos);
 const mockRecoverFromInterrupt = vi.mocked(recoverFromInterrupt);
 const mockSelect = vi.mocked(select);
+const mockLstat = vi.mocked(fs.lstat);
 
 const DEFAULT_SHA = 'abc1234567890abcdef';
 const FAKE_CWD = '/fake/cwd';
@@ -93,6 +105,8 @@ function defaultMocks() {
   mockRevParseHead.mockResolvedValue(DEFAULT_SHA);
   mockAddRecord.mockResolvedValue(undefined);
   mockRecoverFromInterrupt.mockResolvedValue(undefined);
+  // lstat: default to ENOENT (path doesn't exist yet — no symlink)
+  mockLstat.mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
 }
 
 // ---------------------------------------------------------------------------
@@ -119,14 +133,14 @@ describe('install command', () => {
     expect(mockCloneRepo).not.toHaveBeenCalled();
   });
 
-  // (b) Protected-dir block
-  it('(b) rejects when target dir is protected', async () => {
+  // (b) Protected-dir block — throws SafetyError (FIX-1)
+  it('(b) rejects with SafetyError when target dir is protected', async () => {
     const protectedCwd = path.join(os.homedir(), '.claude');
     mockIsProtected.mockReturnValue(true);
 
-    await expect(install('owner/repo', { cwd: protectedCwd })).rejects.toThrow(
-      /Refusing to install into protected directory/i,
-    );
+    const err = await install('owner/repo', { cwd: protectedCwd }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(SafetyError);
+    expect((err as Error).message).toMatch(/Refusing to install into protected directory/i);
     expect(mockCloneRepo).not.toHaveBeenCalled();
   });
 
@@ -145,11 +159,13 @@ describe('install command', () => {
     expect(planArg).toContain('yes');
   });
 
-  // (d) Confirm rejection → cancellation error
-  it('(d) rejects with cancellation error when confirmInstall returns false', async () => {
+  // (d) Confirm rejection → UserCancelError (FIX-1)
+  it('(d) rejects with UserCancelError when confirmInstall returns false', async () => {
     mockConfirmInstall.mockResolvedValue(false);
 
-    await expect(install('owner/repo', { cwd: FAKE_CWD })).rejects.toThrow(/cancelled/i);
+    const err = await install('owner/repo', { cwd: FAKE_CWD }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(UserCancelError);
+    expect((err as Error).message).toMatch(/cancelled/i);
     expect(mockCloneRepo).not.toHaveBeenCalled();
   });
 
@@ -316,6 +332,32 @@ describe('install command', () => {
     await expect(install('owner/repo', { cwd: FAKE_CWD })).rejects.toThrow(
       /Refusing to install into protected directory/i,
     );
+    expect(mockCloneRepo).not.toHaveBeenCalled();
+  });
+
+  // (k) FIX-2: GIT_INSTALL_NONINTERACTIVE=1 skips assertTTY
+  it('(k) GIT_INSTALL_NONINTERACTIVE=1 skips assertTTY even when it would throw', async () => {
+    process.env.GIT_INSTALL_NONINTERACTIVE = '1';
+    mockAssertTTY.mockImplementation(() => {
+      throw new Error('TTY required');
+    });
+
+    // Should succeed despite assertTTY throwing — it is bypassed
+    await expect(install('owner/repo', { cwd: FAKE_CWD })).resolves.toBeUndefined();
+    expect(mockAssertTTY).not.toHaveBeenCalled();
+    expect(mockCloneRepo).toHaveBeenCalledOnce();
+  });
+
+  // (l) FIX-3: symlink target → SafetyError
+  it('(l) rejects with SafetyError when target path is a symlink', async () => {
+    // lstat returns stats indicating a symlink at targetDir
+    mockLstat.mockResolvedValue({
+      isSymbolicLink: () => true,
+    } as import('node:fs').Stats);
+
+    const err = await install('owner/repo', { cwd: FAKE_CWD }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(SafetyError);
+    expect((err as Error).message).toMatch(/symlink/i);
     expect(mockCloneRepo).not.toHaveBeenCalled();
   });
 

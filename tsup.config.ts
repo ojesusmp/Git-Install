@@ -16,6 +16,25 @@ export default defineConfig({
     if (existsSync(src)) {
       await cp(src, dest, { recursive: true });
       console.log('Copied src/skills -> dist/skills');
+      // FIX-7: remove any .gitkeep files that were copied
+      const { readdir, unlink } = await import('node:fs/promises');
+      async function rmGitkeep(dir: string): Promise<void> {
+        let entries;
+        try {
+          entries = await readdir(dir, { withFileTypes: true });
+        } catch {
+          return;
+        }
+        for (const ent of entries) {
+          const p = `${dir}/${ent.name}`;
+          if (ent.isDirectory()) {
+            await rmGitkeep(p);
+          } else if (ent.name === '.gitkeep') {
+            await unlink(p).catch(() => {});
+          }
+        }
+      }
+      await rmGitkeep(dest).catch(() => {});
     }
   },
 });

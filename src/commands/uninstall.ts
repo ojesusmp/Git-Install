@@ -7,6 +7,7 @@ import { assertTTY, confirmUninstall } from '../lib/prompt.js';
 import { loadRecords, removeRecord } from '../lib/install-record.js';
 import { acquireLock, releaseLock } from '../lib/lockfile.js';
 import type { InstallRecord } from '../lib/install-record.js';
+import { SafetyError, UserCancelError } from '../lib/exit-codes.js';
 
 export interface UninstallOptions {
   force?: boolean;
@@ -80,20 +81,18 @@ export async function uninstall(name: string, opts?: UninstallOptions): Promise<
       record = await selectFromMultiple(matches);
     }
 
-    // Step 5: verify install path is safe to delete
+    // Step 5: verify install path is safe to delete (FIX-1: typed SafetyError)
     if (isProtected(record.installPath)) {
-      const err = new Error(`Refusing to remove from protected directory: ${record.installPath}`);
-      (err as NodeJS.ErrnoException).code = 'EPROTECTED';
-      throw err;
+      throw new SafetyError(`Refusing to remove from protected directory: ${record.installPath}`);
     }
 
     // Step 6: display removal plan
     const plan = buildPlan(record);
 
-    // Step 7: confirm
+    // Step 7: confirm (FIX-1: typed UserCancelError)
     const confirmed = await confirmUninstall(plan);
     if (!confirmed) {
-      throw new Error('Uninstall cancelled by user.');
+      throw new UserCancelError('Uninstall cancelled by user');
     }
 
     // Step 8: remove files

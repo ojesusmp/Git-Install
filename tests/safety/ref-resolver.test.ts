@@ -214,7 +214,7 @@ describe('resolveRef — git ls-remote fallback', () => {
     expect(result.mutable).toBe(true);
   });
 
-  it('(f) git ls-remote called with correct URL format', async () => {
+  it('(f) git ls-remote called with correct URL format and SAFE_GIT_FLAGS', async () => {
     const sha = 'cafebabecafebabecafebabecafebabecafebabe';
     mockExeca.mockRejectedValueOnce(enoentError());
     mockExeca.mockResolvedValueOnce({
@@ -224,10 +224,12 @@ describe('resolveRef — git ls-remote fallback', () => {
 
     await resolveRef('owner/repo', 'main');
 
-    // Second call should be git ls-remote
+    // Second call should be git ls-remote with SAFE_GIT_FLAGS (FIX-4)
     const secondCall = mockExeca.mock.calls[1];
     expect(secondCall[0]).toBe('git');
-    expect(secondCall[1]).toEqual(expect.arrayContaining(['ls-remote']));
+    expect(secondCall[1]).toEqual(
+      expect.arrayContaining(['-c', 'core.hooksPath=/dev/null', 'ls-remote']),
+    );
   });
 
   it('(f) git ls-remote for default branch (no ref) resolves HEAD', async () => {

@@ -3,6 +3,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { MissingPrereqError } from '../../src/lib/exit-codes.js';
 
 // Resolve fixture skills source directory relative to this test file
 const thisFile = fileURLToPath(import.meta.url);
@@ -126,7 +127,7 @@ describe('atomicWrite backup behavior on overwrite', () => {
 // (e) Node version check
 // ─────────────────────────────────────────────────────────────────────────────
 describe('Node version check', () => {
-  it('(e) throws when Node version < 20', async () => {
+  it('(e) throws MissingPrereqError when Node version < 20', async () => {
     const original = process.versions.node;
     // Override the readonly property for the duration of the test
     Object.defineProperty(process.versions, 'node', {
@@ -134,7 +135,9 @@ describe('Node version check', () => {
       configurable: true,
     });
     try {
-      await expect(runSetup({ claude: true })).rejects.toThrow(/Node\.js >= 20/);
+      const err = await runSetup({ claude: true }).catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(MissingPrereqError);
+      expect((err as Error).message).toMatch(/Node\.js >= 20/);
     } finally {
       Object.defineProperty(process.versions, 'node', {
         value: original,

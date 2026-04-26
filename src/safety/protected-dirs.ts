@@ -16,15 +16,28 @@ export const PROTECTED_DIRS: readonly string[] = [
   '~/.aws',
   '~/.config/gh',
   '~/.netrc',
+  '~/.docker',
+  '~/.kube',
+] as const;
+
+/**
+ * Exact file paths that are always protected.
+ * Paths prefixed with `~` are expanded to os.homedir() at compare time.
+ * FIX-5: covers credential files that are not directories.
+ */
+export const PROTECTED_FILES: readonly string[] = [
+  '~/.npmrc',
+  '~/.pgpass',
+  '~/.gitconfig',
 ] as const;
 
 /**
  * File patterns that are always protected regardless of directory.
  * Matches the `*.env` glob: any file whose name ends with `.env`.
+ * FIX-6: removed redundant /(?:^|[\\/])\.env$/ — the broader /\.env$/ covers it.
  */
 export const PROTECTED_FILE_PATTERNS: readonly RegExp[] = [
-  /(?:^|[\\/])\.env$/, // exact .env
-  /\.env$/, // anything ending in .env (e.g. production.env)
+  /\.env$/, // anything ending in .env (e.g. .env, production.env)
 ] as const;
 
 /**
@@ -64,6 +77,15 @@ export function isProtected(targetPath: string): boolean {
     // Use sep-terminated prefix to avoid partial matches (e.g. ~/.claudeXYZ)
     const prefix = normDir.endsWith(path.sep) ? normDir : normDir + path.sep;
     if (normResolved === normDir || normResolved.startsWith(prefix)) {
+      return true;
+    }
+  }
+
+  // Check against exact protected file paths (FIX-5)
+  for (const file of PROTECTED_FILES) {
+    const expandedFile = expandPath(file);
+    const normFile = normalise(expandedFile);
+    if (normResolved === normFile) {
       return true;
     }
   }

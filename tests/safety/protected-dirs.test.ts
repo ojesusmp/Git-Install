@@ -6,6 +6,7 @@ import * as path from 'node:path';
 import {
   PROTECTED_DIRS,
   PROTECTED_FILE_PATTERNS,
+  PROTECTED_FILES,
   isProtected,
 } from '../../src/safety/protected-dirs.js';
 
@@ -208,6 +209,87 @@ describe('isProtected — case-insensitive Windows paths', () => {
     const mixedCaseTarget = path.join(home, '.CLAUDE', 'skills');
     // On Linux, .CLAUDE !== .claude so it should NOT be blocked
     expect(isProtected(mixedCaseTarget)).toBe(false);
+  });
+});
+
+describe('PROTECTED_DIRS — FIX-5 new entries', () => {
+  it('(a) includes ~/.docker', () => {
+    expect(PROTECTED_DIRS).toContain('~/.docker');
+  });
+
+  it('(a) includes ~/.kube', () => {
+    expect(PROTECTED_DIRS).toContain('~/.kube');
+  });
+
+  it('(b) blocks path inside ~/.docker', () => {
+    const target = path.join(home, '.docker', 'config.json');
+    expect(isProtected(target)).toBe(true);
+  });
+
+  it('(b) blocks path inside ~/.kube', () => {
+    const target = path.join(home, '.kube', 'config');
+    expect(isProtected(target)).toBe(true);
+  });
+});
+
+describe('PROTECTED_FILES — FIX-5 exact file paths', () => {
+  it('(a) exports a readonly array', () => {
+    expect(Array.isArray(PROTECTED_FILES)).toBe(true);
+    expect(PROTECTED_FILES.length).toBeGreaterThan(0);
+  });
+
+  it('(a) includes ~/.npmrc', () => {
+    expect(PROTECTED_FILES).toContain('~/.npmrc');
+  });
+
+  it('(a) includes ~/.pgpass', () => {
+    expect(PROTECTED_FILES).toContain('~/.pgpass');
+  });
+
+  it('(a) includes ~/.gitconfig', () => {
+    expect(PROTECTED_FILES).toContain('~/.gitconfig');
+  });
+
+  it('(b) blocks ~/.npmrc exactly', () => {
+    const target = path.join(home, '.npmrc');
+    expect(isProtected(target)).toBe(true);
+  });
+
+  it('(b) blocks ~/.pgpass exactly', () => {
+    const target = path.join(home, '.pgpass');
+    expect(isProtected(target)).toBe(true);
+  });
+
+  it('(b) blocks ~/.gitconfig exactly', () => {
+    const target = path.join(home, '.gitconfig');
+    expect(isProtected(target)).toBe(true);
+  });
+
+  it('(c) does NOT block a .npmrc inside a project dir (only exact home path)', () => {
+    // A file at /some/project/.npmrc should NOT be blocked — PROTECTED_FILES checks exact paths
+    // The .env pattern would catch .env but PROTECTED_FILES is for specific home-level files
+    const target = path.join(home, 'projects', 'myapp', '.npmrc');
+    // This should NOT be blocked by PROTECTED_FILES (not exact match)
+    // It also doesn't end in .env so PROTECTED_FILE_PATTERNS won't catch it
+    expect(isProtected(target)).toBe(false);
+  });
+});
+
+describe('PROTECTED_FILE_PATTERNS — FIX-6 single regex', () => {
+  it('(a) has exactly one pattern after deduplication', () => {
+    expect(PROTECTED_FILE_PATTERNS).toHaveLength(1);
+  });
+
+  it('(a) still blocks .env', () => {
+    expect(PROTECTED_FILE_PATTERNS[0].test('.env')).toBe(true);
+  });
+
+  it('(a) still blocks production.env', () => {
+    expect(PROTECTED_FILE_PATTERNS[0].test('production.env')).toBe(true);
+  });
+
+  it('(a) does NOT block .envelope', () => {
+    expect(PROTECTED_FILE_PATTERNS[0].test('.envelope')).toBe(false);
   });
 });
 

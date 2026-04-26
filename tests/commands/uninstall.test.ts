@@ -36,6 +36,7 @@ vi.mock('@inquirer/prompts', () => ({
 }));
 
 import type { InstallRecord, InstallStore } from '../../src/lib/install-record.js';
+import { SafetyError, UserCancelError } from '../../src/lib/exit-codes.js';
 
 const RECORD_A: InstallRecord = {
   repo: 'ojesusmp/Git-Install',
@@ -139,8 +140,8 @@ describe('uninstall command', () => {
     stdoutSpy.mockRestore();
   });
 
-  // (e) Protected install path
-  it('(e) throws safety error when installPath is protected', async () => {
+  // (e) Protected install path — throws SafetyError (FIX-1)
+  it('(e) throws SafetyError when installPath is protected', async () => {
     const protectedRecord: InstallRecord = {
       ...RECORD_A,
       installPath: `${process.env.HOME ?? '/root'}/.claude/something`,
@@ -153,9 +154,9 @@ describe('uninstall command', () => {
     vi.mocked(isProtected).mockReturnValue(true);
 
     const { uninstall } = await import('../../src/commands/uninstall.ts');
-    await expect(uninstall('ojesusmp/Git-Install')).rejects.toThrow(
-      /Refusing to remove from protected/,
-    );
+    const err = await uninstall('ojesusmp/Git-Install').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(SafetyError);
+    expect((err as Error).message).toMatch(/Refusing to remove from protected/);
   });
 
   // (f) TTY refusal
@@ -172,8 +173,8 @@ describe('uninstall command', () => {
     await expect(uninstall('ojesusmp/Git-Install')).rejects.toThrow(/TTY required/);
   });
 
-  // (g) Confirmation rejection — no files deleted, no record removed
-  it('(g) throws cancellation, no fs.rm, no removeRecord when confirmUninstall returns false', async () => {
+  // (g) Confirmation rejection — throws UserCancelError, no files deleted (FIX-1)
+  it('(g) throws UserCancelError, no fs.rm, no removeRecord when confirmUninstall returns false', async () => {
     const { loadRecords } = await import('../../src/lib/install-record.js');
     vi.mocked(loadRecords).mockResolvedValue(makeStore([RECORD_A]));
 
@@ -181,7 +182,9 @@ describe('uninstall command', () => {
     vi.mocked(confirmUninstall).mockResolvedValue(false);
 
     const { uninstall } = await import('../../src/commands/uninstall.ts');
-    await expect(uninstall('ojesusmp/Git-Install')).rejects.toThrow(/cancelled/i);
+    const err = await uninstall('ojesusmp/Git-Install').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(UserCancelError);
+    expect((err as Error).message).toMatch(/cancelled/i);
 
     const fsPromises = await import('node:fs/promises');
     expect(vi.mocked(fsPromises.rm)).not.toHaveBeenCalled();

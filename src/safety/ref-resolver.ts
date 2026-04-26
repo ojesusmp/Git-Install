@@ -12,6 +12,9 @@ export interface ResolvedRef {
  */
 const SHA_RE = /^[0-9a-f]{7,40}$/i;
 
+/** FIX-4: Prevent hook execution from cloned repos influencing resolution */
+const SAFE_GIT_FLAGS = ['-c', 'core.hooksPath=/dev/null'];
+
 /**
  * Resolve a GitHub repo ref to a concrete SHA.
  *
@@ -47,10 +50,14 @@ export async function resolveRef(repo: string, ref?: string): Promise<ResolvedRe
     }
   }
 
-  // (f) Fallback: git ls-remote
+  // (f) Fallback: git ls-remote (FIX-4: include SAFE_GIT_FLAGS)
   const repoUrl = `https://github.com/${owner}/${repoName}.git`;
   try {
-    const { stdout } = await execa('git', ['ls-remote', repoUrl, ref ?? 'HEAD'], { all: false });
+    const { stdout } = await execa(
+      'git',
+      [...SAFE_GIT_FLAGS, 'ls-remote', repoUrl, ref ?? 'HEAD'],
+      { all: false },
+    );
     const firstLine = stdout.trim().split('\n')[0] ?? '';
     const sha = firstLine.split('\t')[0]?.trim() ?? '';
     if (sha && SHA_RE.test(sha)) {

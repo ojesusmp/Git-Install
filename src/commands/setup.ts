@@ -3,6 +3,7 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { execa } from 'execa';
+import { MissingPrereqError } from '../lib/exit-codes.js';
 import { atomicWrite } from '../safety/atomicity.js';
 
 export interface SetupOptions {
@@ -33,7 +34,7 @@ function homeDir(): string {
 async function checkNodeVersion(): Promise<void> {
   const major = parseInt(process.versions.node.split('.')[0], 10);
   if (major < 20) {
-    throw new Error(
+    throw new MissingPrereqError(
       `Node.js >= 20 is required (found ${process.versions.node}). ` +
         'Please upgrade Node.js and try again.',
     );

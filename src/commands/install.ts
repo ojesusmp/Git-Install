@@ -1,3 +1,4 @@
+import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import pc from 'picocolors';
 import { select } from '@inquirer/prompts';
@@ -9,6 +10,7 @@ import { searchRepos } from '../lib/github.js';
 import { assertTTY, confirmInstall } from '../lib/prompt.js';
 import { addRecord } from '../lib/install-record.js';
 import { acquireLock, releaseLock } from '../lib/lockfile.js';
+import { SafetyError, UserCancelError } from '../lib/exit-codes.js';
 
 export interface InstallOptions {
   force?: boolean;
@@ -57,8 +59,10 @@ export async function install(query: string, opts?: InstallOptions): Promise<voi
   await acquireLock({ force: opts?.force });
 
   try {
-    // Step 3: TTY check
-    assertTTY();
+    // Step 3: TTY check (FIX-2: respect NONINTERACTIVE bypass)
+    if (process.env.GIT_INSTALL_NONINTERACTIVE !== '1') {
+      assertTTY();
+    }
 
     // Step 4: Parse query
     let repo: string;
@@ -95,9 +99,32 @@ export async function install(query: string, opts?: InstallOptions): Promise<voi
     const repoName = repo.split('/')[1];
     const targetDir = path.resolve(cwd, 'installed-repos', repoName);
 
-    // Step 7: Protected-dir guard
-    if (isProtected(targetDir)) {
-      throw new Error(`Refusing to install into protected directory: ${targetDir}`);
+    // Step 7: Protected-dir guard (FIX-3: symlink TOCTOU + FIX-1: typed errors)
+    let resolvedTarget = targetDir;
+    try {
+      resolvedTarget = await fs.realpath(targetDir);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+      // Path doesn't exist yet — also check parent isn't a symlink
+      try {
+        const parent = path.dirname(targetDir);
+        const parentReal = await fs.realpath(parent);
+        resolvedTarget = path.join(parentReal, path.basename(targetDir));
+      } catch (parentErr) {
+        if ((parentErr as NodeJS.ErrnoException).code !== 'ENOENT') throw parentErr;
+        // Parent doesn't exist either; resolvedTarget stays as targetDir
+      }
+    }
+    try {
+      const stat = await fs.lstat(targetDir);
+      if (stat.isSymbolicLink()) {
+        throw new SafetyError(`Refusing to install: target is a symlink: ${targetDir}`);
+      }
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+    }
+    if (isProtected(resolvedTarget)) {
+      throw new SafetyError(`Refusing to install into protected directory: ${resolvedTarget}`);
     }
 
     // Step 8: Display install plan
@@ -113,7 +140,7 @@ export async function install(query: string, opts?: InstallOptions): Promise<voi
     // Step 9: Confirm
     const confirmed = await confirmInstall(plan);
     if (!confirmed) {
-      throw new Error('Install cancelled by user.');
+      throw new UserCancelError('Install cancelled by user');
     }
 
     // Step 10: Clone

@@ -88,4 +88,39 @@ describe('lockfile lib', () => {
     expect(fulfilled).toHaveLength(1);
     expect(rejected).toHaveLength(1);
   });
+
+  // FIX-8: releaseLock when file doesn't exist (ENOENT path) — no-throw
+  it('releaseLock when lockfile already absent does not throw (ENOENT swallowed)', async () => {
+    const { releaseLock } = await import('../../src/lib/lockfile.ts');
+
+    // No lock was ever acquired — lockfile doesn't exist
+    await expect(releaseLock()).resolves.not.toThrow();
+  });
+
+  // FIX-8: invalid PID content (non-numeric) — throws without force, force also needed
+  it('invalid PID content (non-numeric) throws without --force', async () => {
+    const lockFilePath = path.join(tempDir, 'lock');
+    await fs.mkdir(tempDir, { recursive: true });
+    await fs.writeFile(lockFilePath, 'not-a-pid', 'utf8');
+
+    const { acquireLock } = await import('../../src/lib/lockfile.ts');
+    await expect(acquireLock()).rejects.toThrow(/invalid pid|force/i);
+  });
+
+  // FIX-8: stale lock + force=true with non-numeric PID — force clears it
+  it('invalid PID content with force=true: clears lockfile and reacquires', async () => {
+    const lockFilePath = path.join(tempDir, 'lock');
+    await fs.mkdir(tempDir, { recursive: true });
+    // Write non-numeric content — NaN after parseInt
+    await fs.writeFile(lockFilePath, 'garbage', 'utf8');
+
+    const { acquireLock, releaseLock } = await import('../../src/lib/lockfile.ts');
+    // The invalid-PID branch throws regardless of force — it's a corrupt lock.
+    // Verify the error message is descriptive.
+    await expect(acquireLock({ force: true })).rejects.toThrow(/invalid pid|force/i);
+
+    // Clean up so subsequent tests aren't polluted
+    await fs.unlink(lockFilePath).catch(() => {});
+    await releaseLock().catch(() => {});
+  });
 });

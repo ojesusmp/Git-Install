@@ -27,7 +27,7 @@
     "install",
     "cli"
   ],
-  "author": "Orlando Molina <ojesusmp@gmail.com>",
+  "author": "Orlando Molina (https://github.com/ojesusmp)",
   "license": "MIT",
   "engines": {
     "node": ">=20.0.0"

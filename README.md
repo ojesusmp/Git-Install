@@ -4,6 +4,8 @@
 
 `@ojesusmp/git-install` is an npm CLI that teaches Claude Code and OpenAI Codex how to find, install, and cleanly remove GitHub repositories — with code-enforced safety guards, atomic file operations, and SHA-pinned installs.
 
+Built by **Orlando Molina** ([@ojesusmp](https://github.com/ojesusmp)).
+
 ## Prerequisites
 
 - Node.js >= 20
